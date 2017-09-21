@@ -1,4 +1,4 @@
-package golangNeo4jBoltDriver
+package neo4jbolt
 
 import (
 	"database/sql/driver"
