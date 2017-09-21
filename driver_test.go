@@ -1,4 +1,4 @@
-package golangNeo4jBoltDriver
+package neo4jbolt
 
 import (
 	"os"
@@ -8,7 +8,7 @@ import (
 
 	"sync"
 
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/log"
+	"github.com/thingful/golang-neo4j-bolt-driver/log"
 )
 
 var (

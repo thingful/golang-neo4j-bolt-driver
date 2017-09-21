@@ -1,4 +1,4 @@
-package golangNeo4jBoltDriver
+package neo4jbolt
 
 import (
 	"bytes"
@@ -17,10 +17,10 @@ import (
 	"crypto/x509"
 	"strconv"
 
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/encoding"
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/errors"
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/log"
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/structures/messages"
+	"github.com/thingful/golang-neo4j-bolt-driver/encoding"
+	"github.com/thingful/golang-neo4j-bolt-driver/errors"
+	"github.com/thingful/golang-neo4j-bolt-driver/log"
+	"github.com/thingful/golang-neo4j-bolt-driver/structures/messages"
 )
 
 // Conn represents a connection to Neo4J
