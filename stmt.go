@@ -3,9 +3,9 @@ package neo4jbolt
 import (
 	"database/sql/driver"
 
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/errors"
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/log"
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/structures/messages"
+	"github.com/thingful/golang-neo4j-bolt-driver/errors"
+	"github.com/thingful/golang-neo4j-bolt-driver/log"
+	"github.com/thingful/golang-neo4j-bolt-driver/structures/messages"
 )
 
 // Stmt represents a statement to run against the database

@@ -1,8 +1,8 @@
 package encoding
 
 import (
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/errors"
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/structures/graph"
+	"github.com/thingful/golang-neo4j-bolt-driver/errors"
+	"github.com/thingful/golang-neo4j-bolt-driver/structures/graph"
 )
 
 func sliceInterfaceToString(from []interface{}) ([]string, error) {

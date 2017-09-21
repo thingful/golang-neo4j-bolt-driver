@@ -1,7 +1,7 @@
 package neo4jbolt
 
 import (
-	"github.com/johnnadratowski/golang-neo4j-bolt-driver/structures/graph"
+	"github.com/thingful/golang-neo4j-bolt-driver/structures/graph"
 	"io"
 	"testing"
 )
