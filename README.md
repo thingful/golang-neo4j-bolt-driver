@@ -242,3 +242,11 @@ You need access to a running Neo4J database to develop for this project, so that
 * Cypher Parser to implement NumInput and pre-flight checking
 * More Tests
 * Benchmark Tests
+
+## WIP NOTES
+
+Command for running neo4j in docker locally to test against:
+
+```
+$ docker run --publish=7474:7474 --publish=7687:7687 --env=NEO4J_AUTH=none --rm neo4j:3.1.0
+```
