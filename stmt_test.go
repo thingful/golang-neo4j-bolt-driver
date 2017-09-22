@@ -37,8 +37,10 @@ func TestBoltStmt_SelectOne(t *testing.T) {
 	}
 
 	expectedMetadata := map[string]interface{}{
-		"fields": []interface{}{"1"},
+		"result_available_after": rows.Metadata()["result_available_after"],
+		"fields":                 []interface{}{"1"},
 	}
+
 	if !reflect.DeepEqual(rows.Metadata(), expectedMetadata) {
 		t.Fatalf("Unexpected success metadata. Expected %#v. Got: %#v", expectedMetadata, rows.Metadata())
 	}
@@ -53,7 +55,11 @@ func TestBoltStmt_SelectOne(t *testing.T) {
 	}
 
 	_, metadata, err := rows.NextNeo()
-	expectedMetadata = map[string]interface{}{"type": "r"}
+	expectedMetadata = map[string]interface{}{
+		"result_consumed_after": metadata["result_consumed_after"],
+		"type":                  "r",
+	}
+
 	if err != io.EOF {
 		t.Fatalf("Unexpected row closed output. Expected io.EOF. Got: %s", err)
 	} else if !reflect.DeepEqual(metadata, expectedMetadata) {
@@ -88,8 +94,10 @@ func TestBoltStmt_SelectMany(t *testing.T) {
 	}
 
 	expectedMetadata := map[string]interface{}{
-		"fields": []interface{}{"1", "34234.34323", "\"string\"", "[1, \"2\", 3, true, null]", "true", "null"},
+		"result_available_after": rows.Metadata()["result_available_after"],
+		"fields":                 []interface{}{"1", "34234.34323", "\"string\"", "[1, \"2\", 3, true, null]", "true", "null"},
 	}
+
 	if !reflect.DeepEqual(rows.Metadata(), expectedMetadata) {
 		t.Fatalf("Unexpected success metadata. Expected %#v. Got: %#v", expectedMetadata, rows.Metadata())
 	}
@@ -119,7 +127,11 @@ func TestBoltStmt_SelectMany(t *testing.T) {
 	}
 
 	_, metadata, err := rows.NextNeo()
-	expectedMetadata = map[string]interface{}{"type": "r"}
+	expectedMetadata = map[string]interface{}{
+		"result_consumed_after": metadata["result_consumed_after"],
+		"type":                  "r",
+	}
+
 	if err != io.EOF {
 		t.Fatalf("Unexpected row closed output. Expected io.EOF. Got: %s", err)
 	} else if !reflect.DeepEqual(metadata, expectedMetadata) {

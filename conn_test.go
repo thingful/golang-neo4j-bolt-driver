@@ -103,8 +103,10 @@ func TestBoltConn_SelectOne(t *testing.T) {
 	}
 
 	expectedMetadata := map[string]interface{}{
-		"fields": []interface{}{"1"},
+		"result_available_after": rows.Metadata()["result_available_after"],
+		"fields":                 []interface{}{"1"},
 	}
+
 	if !reflect.DeepEqual(rows.Metadata(), expectedMetadata) {
 		t.Fatalf("Unexpected success metadata. Expected %#v. Got: %#v", expectedMetadata, rows.Metadata())
 	}
@@ -119,7 +121,11 @@ func TestBoltConn_SelectOne(t *testing.T) {
 	}
 
 	_, metadata, err := rows.NextNeo()
-	expectedMetadata = map[string]interface{}{"type": "r"}
+	expectedMetadata = map[string]interface{}{
+		"result_consumed_after": metadata["result_consumed_after"],
+		"type":                  "r",
+	}
+
 	if err != io.EOF {
 		t.Fatalf("Unexpected row closed output. Expected io.EOF. Got: %s", err)
 	} else if !reflect.DeepEqual(metadata, expectedMetadata) {
