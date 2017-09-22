@@ -1,12 +1,12 @@
 # Golang Neo4J Bolt Driver
-[![Build Status](https://travis-ci.org/johnnadratowski/golang-neo4j-bolt-driver.svg?branch=master)](https://travis-ci.org/johnnadratowski/golang-neo4j-bolt-driver) *Tested against Golang 1.4.3 and up*
+[![Build Status](https://travis-ci.org/thingful/golang-neo4j-bolt-driver.svg?branch=master)](https://travis-ci.org/thingful/golang-neo4j-bolt-driver) *Tested against Golang 1.4.3 and up*
 
 
 Implements the Neo4J Bolt Protocol specification:
 As of the time of writing this, the current version is v3.1.0-M02
 
 ```
-go get github.com/johnnadratowski/golang-neo4j-bolt-driver
+go get github.com/thingful/golang-neo4j-bolt-driver
 ```
 
 ## Features
@@ -194,7 +194,7 @@ func slowNClean() {
 ```
 ## API
 
-*_There is much more detailed information in [the godoc](http://godoc.org/github.com/johnnadratowski/golang-neo4j-bolt-driver)_*
+*_There is much more detailed information in [the godoc](http://godoc.org/github.com/thingful/golang-neo4j-bolt-driver)_*
 
 This implementation attempts to follow the best practices as per the Bolt specification, but also implements compatibility with Golang's `sql.driver` interface.
 
@@ -242,3 +242,11 @@ You need access to a running Neo4J database to develop for this project, so that
 * Cypher Parser to implement NumInput and pre-flight checking
 * More Tests
 * Benchmark Tests
+
+## WIP NOTES
+
+Command for running neo4j in docker locally to test against:
+
+```
+$ docker run --publish=7474:7474 --publish=7687:7687 --env=NEO4J_AUTH=none --rm neo4j:3.1.0
+```
