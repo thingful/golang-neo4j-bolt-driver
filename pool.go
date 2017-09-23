@@ -1,5 +1,76 @@
 package neo4jbolt
 
+import "sync"
+
+type Pool interface {
+	// Get returns a new connection from the pool. Closing the connection puts it
+	// back into the pool. Closing when the pool is destroyed or full will be
+	// counted as an error
+	Get() (Conn, error)
+
+	// Close closes the pool and all its connections. After Close() the pool is
+	// no longer usable.
+	Close()
+
+	// Len returns the current number of connections in the pool.
+	Len() int
+}
+
+// Factory is a function to create new boltConn instances
+type Factory func() (*boltConn, error)
+
+type connPool struct {
+	// storage for our boltConn instances
+	mu    sync.Mutex
+	conns chan *boltConn
+
+	// boltConn factory function
+	factory Factory
+}
+
+// Close closes the pool and all its connections.
+func (c *connPool) Close() {
+	c.mu.Lock()
+	conns := c.conns
+	c.conns = nil
+	c.factory = nil
+	c.mu.Unlock()
+
+	if conns == nil {
+		return
+	}
+
+	close(conns)
+	for conn := range conns {
+		conn.Close()
+	}
+}
+
+func (c *connPool) Get() (Conn, error) {
+	//conns := c.getConns()
+	//if conns == nil {
+	//	return nil, ErrClosed
+	//}
+
+	//select {
+	//case conn := <-conns:
+	//	if conn == nil {
+	//		return nil, ErrClosed
+	//	}
+
+	//	return
+	return nil, nil
+}
+
+func (c *connPool) getConns() chan *boltConn {
+	c.mu.Lock()
+	conns := c.conns
+	c.mu.Unlock()
+	return conns
+}
+
+func (c *connPool) Len() int { return len(c.getConns()) }
+
 // DriverPool is a driver allowing connection to Neo4j with support for connection pooling
 // The driver allows you to open a new connection to Neo4j
 //
