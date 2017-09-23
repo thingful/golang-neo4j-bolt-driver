@@ -25,40 +25,50 @@ import (
 
 // Conn represents a connection to Neo4J
 //
-// Implements a neo-friendly interface.
-// Some of the features of this interface implement neo-specific features
-// unavailable in the sql/driver compatible interface
+// Implements a neo-friendly interface.  Some of the features of this interface
+// implement neo-specific features unavailable in the sql/driver compatible
+// interface
 //
-// Conn objects, and any prepared statements/transactions within ARE NOT
-// THREAD SAFE.  If you want to use multipe go routines with these objects,
-// you should use a driver to create a new conn for each routine.
+// Conn objects, and any prepared statements/transactions within ARE NOT THREAD
+// SAFE.  If you want to use multipe go routines with these objects, you should
+// use a driver to create a new conn for each routine.
 type Conn interface {
 	// PrepareNeo prepares a neo4j specific statement
 	PrepareNeo(query string) (Stmt, error)
-	// PreparePipeline prepares a neo4j specific pipeline statement
-	// Useful for running multiple queries at the same time
+
+	// PreparePipeline prepares a neo4j specific pipeline statement Useful for
+	// running multiple queries at the same time
 	PreparePipeline(query ...string) (PipelineStmt, error)
+
 	// QueryNeo queries using the neo4j-specific interface
 	QueryNeo(query string, params map[string]interface{}) (Rows, error)
-	// QueryNeoAll queries using the neo4j-specific interface and returns all row data and output metadata
+
+	// QueryNeoAll queries using the neo4j-specific interface and returns all row
+	// data and output metadata
 	QueryNeoAll(query string, params map[string]interface{}) ([][]interface{}, map[string]interface{}, map[string]interface{}, error)
+
 	// QueryPipeline queries using the neo4j-specific interface
 	// pipelining multiple statements
 	QueryPipeline(query []string, params ...map[string]interface{}) (PipelineRows, error)
+
 	// ExecNeo executes a query using the neo4j-specific interface
 	ExecNeo(query string, params map[string]interface{}) (Result, error)
+
 	// ExecPipeline executes a query using the neo4j-specific interface
 	// pipelining multiple statements
 	ExecPipeline(query []string, params ...map[string]interface{}) ([]Result, error)
+
 	// Close closes the connection
 	Close() error
+
 	// Begin starts a new transaction
 	Begin() (driver.Tx, error)
-	// SetChunkSize is used to set the max chunk size of the
-	// bytes to send to Neo4j at once
+
+	// SetChunkSize is used to set the max chunk size of the bytes to send to
+	// Neo4j at once
 	SetChunkSize(uint16)
-	// SetTimeout sets the read/write timeouts for the
-	// connection to Neo4j
+
+	// SetTimeout sets the read/write timeouts for the connection to Neo4j
 	SetTimeout(time.Duration)
 }
 
@@ -78,10 +88,12 @@ type boltConn struct {
 	caCertFile    string
 	keyFile       string
 	tlsNoVerify   bool
-	transaction   *boltTx
-	statement     *boltStmt
-	driver        *boltDriver
-	poolDriver    DriverPool
+
+	transaction *boltTx
+	statement   *boltStmt
+
+	driver     *boltDriver
+	poolDriver DriverPool
 }
 
 func createBoltConn(connStr string) *boltConn {
