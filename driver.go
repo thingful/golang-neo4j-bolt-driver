@@ -50,7 +50,7 @@ type Driver interface {
 	OpenNeo(connStr string) (Conn, error)
 
 	// OpenPool opens a Neo-specific connection pool.
-	OpenPool(initialCap, maxCap int, factory Factory) (Pool, error)
+	OpenPool(connStr string, initialCap, maxCap int) (Pool, error)
 }
 
 type DriverOptions struct {
@@ -69,7 +69,21 @@ type DriverOptions struct {
 	// TLSConfig is the tls configuration (nil by default)
 	TLSConfig *tls.Config
 
+	// ChunkSize is used to set the max chunk size of the bytes to send to Neo4j
+	// at once
 	ChunkSize uint16
+}
+
+// String is our stringer implementation for DriverOptions
+func (d *DriverOptions) String() string {
+	return fmt.Sprintf(
+		"{dial timeout: %s, read timeout: %s, write timeout: %s, address: %s, chunk size: %v}",
+		d.DialTimeout,
+		d.ReadTimeout,
+		d.WriteTimeout,
+		d.Addr,
+		d.ChunkSize,
+	)
 }
 
 func DefaultDriverOptions() *DriverOptions {
@@ -100,32 +114,43 @@ func NewDriverWithOptions(options *DriverOptions) Driver {
 
 // Open opens a new Bolt connection to the Neo4J database
 func (d *boltDriver) Open(connStr string) (driver.Conn, error) {
-	return newBoltConn(connStr, d) // Never use pooling when using SQL driver
+	if d.options == nil {
+		d.options = DefaultDriverOptions()
+	}
+
+	d.options.Addr = connStr
+
+	return newBoltConn(d, nil) // Never use pooling when using SQL driver
 }
 
 // Open opens a new Bolt connection to the Neo4J database. Implements a
 // Neo-friendly alternative to sql/driver.
 func (d *boltDriver) OpenNeo(connStr string) (Conn, error) {
-	return newBoltConn(connStr, d)
+	conn, err := d.Open(connStr)
+	if err != nil {
+		return nil, err
+	}
+
+	return conn.(Conn), nil
 }
 
 // OpenPool opens an returns a new connection pool for interacting with Neo4j.
 // The pool contains the Neo-friendly alternative to sql/driver.
-func (d *boltDriver) OpenPool(initialCap, maxCap int, factory Factory) (Pool, error) {
+func (d *boltDriver) OpenPool(connStr string, initialCap, maxCap int) (Pool, error) {
 	if initialCap < 0 || maxCap <= 0 || initialCap > maxCap {
 		return nil, ErrInvalidCapacity
 	}
 
 	c := &connPool{
-		conns:   make(chan *boltConn, maxCap),
-		factory: factory,
+		conns:  make(chan *boltConn, maxCap),
+		driver: d,
 	}
 
 	for i := 0; i < initialCap; i++ {
-		conn, err := factory()
+		conn, err := newBoltConn(d, c)
 		if err != nil {
 			c.Close()
-			return nil, fmt.Errorf("factory is not able to fill the pool: %v", err)
+			return nil, fmt.Errorf("unable to fill the pool: %v", err)
 		}
 		c.conns <- conn
 	}
