@@ -3,8 +3,10 @@ package neo4jbolt
 import (
 	"bytes"
 	"crypto/tls"
+	"crypto/x509"
 	"database/sql/driver"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/url"
 	"strings"
@@ -71,20 +73,25 @@ func newBoltConn(driver *boltDriver, pool *connPool) (*boltConn, error) {
 		return nil, err
 	}
 
+	tlsConfig, err := parseTLSConfig(u)
+	if err != nil {
+		return nil, err
+	}
+
 	c := &boltConn{
 		driver:        driver,
 		url:           u,
 		user:          username,
 		password:      password,
 		serverVersion: make([]byte, 4),
-
-		pool: pool,
+		pool:          pool,
+		tlsConfig:     tlsConfig,
 	}
 
 	log.Trace("Bolt Host: ", u.Host)
 	log.Trace("User: ", username)
 	log.Trace("Password: ", password)
-	log.Trace("TLS Config: ", c.driver.tlsConfig)
+	log.Trace("TLS Config: ", c.tlsConfig)
 
 	// initialize the connection
 	err = c.initialize(driver)
@@ -129,53 +136,55 @@ func parseAuth(u *url.URL) (string, string, error) {
 	return "", "", nil
 }
 
-//func parseTLSConfig(u *url.URL) (*tls.Config, error) {
-//	useTLS = strings.HasPrefix(strings.ToLower(u.Query().Get("tls")), "t") || u.Query().Get("tls") == "1"
-//
-//	if !useTLS {
-//		return nil, nil
-//	}
-//
-//	certFile := url.Query().Get("tls_cert_file")
-//	keyFile := url.Query().Get("tls_key_file")
-//	caCertFile := url.Query().Get("tls_ca_cert_file")
-//	tlsNoVerify := strings.HasPrefix(strings.ToLower(url.Query().Get("tls_no_verify")), "t") ||
-//		url.Query().Get("tls_no_verify") == "1"
-//
-//	var (
-//		caCertPool *x509.CertPool
-//		cert       tls.Certificate
-//	)
-//
-//	if caCertFile != "" {
-//		caCert, err := ioutil.ReadFile(caCertFile)
-//		if err != nil {
-//			return nil, err
-//		}
-//
-//		caCertPool = x509.NewCertPool()
-//		caCertPool.AppendCertsFromPEM(caCert)
-//	}
-//
-//	if certFile != "" {
-//		if keyFile == "" {
-//			return nil, errors.New("Must provide a keyfile when providing a certfile")
-//		}
-//
-//		cert, err = tls.LoadX509KeyPair(certFile, keyFile)
-//		if err != nil {
-//			return nil, err
-//		}
-//	}
-//
-//	return &tls.Config{
-//		MinVersion:         tls.VersionTLS10,
-//		MaxVersion:         tls.VersionTLS12,
-//		RootCAs:            caCertPool,
-//		Certificates:       []tls.Certificate{cert},
-//		InsecureSkipVerify: tlsNoVerify,
-//	}, nil
-//}
+func parseTLSConfig(u *url.URL) (*tls.Config, error) {
+	useTLS := strings.HasPrefix(strings.ToLower(u.Query().Get("tls")), "t") ||
+		u.Query().Get("tls") == "1"
+
+	if !useTLS {
+		return nil, nil
+	}
+
+	certFile := u.Query().Get("tls_cert_file")
+	keyFile := u.Query().Get("tls_key_file")
+	caCertFile := u.Query().Get("tls_ca_cert_file")
+	tlsNoVerify := strings.HasPrefix(strings.ToLower(u.Query().Get("tls_no_verify")), "t") ||
+		u.Query().Get("tls_no_verify") == "1"
+
+	var (
+		caCertPool *x509.CertPool
+		cert       tls.Certificate
+		err        error
+	)
+
+	if caCertFile != "" {
+		caCert, err := ioutil.ReadFile(caCertFile)
+		if err != nil {
+			return nil, err
+		}
+
+		caCertPool = x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+	}
+
+	if certFile != "" {
+		if keyFile == "" {
+			return nil, errors.New("Must provide a keyfile when providing a certfile")
+		}
+
+		cert, err = tls.LoadX509KeyPair(certFile, keyFile)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return &tls.Config{
+		MinVersion:         tls.VersionTLS10,
+		MaxVersion:         tls.VersionTLS12,
+		RootCAs:            caCertPool,
+		Certificates:       []tls.Certificate{cert},
+		InsecureSkipVerify: tlsNoVerify,
+	}, nil
+}
 
 type boltConn struct {
 	driver        *boltDriver
@@ -186,6 +195,7 @@ type boltConn struct {
 	connErr       error
 	serverVersion []byte
 	closed        bool
+	tlsConfig     *tls.Config
 
 	pool *connPool
 	mu   sync.RWMutex
@@ -249,8 +259,8 @@ func (c *boltConn) connect() (net.Conn, error) {
 		return nil, errors.Wrap(err, "An error occurred dialing to neo4j")
 	}
 
-	if c.driver.tlsConfig != nil {
-		conn := tls.Client(conn, c.driver.tlsConfig)
+	if c.tlsConfig != nil {
+		conn := tls.Client(conn, c.tlsConfig)
 		err = conn.Handshake()
 		if err != nil {
 			return nil, errors.Wrap(err, "An error occurred dialing to neo4j")

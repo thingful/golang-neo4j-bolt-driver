@@ -1,7 +1,6 @@
 package neo4jbolt
 
 import (
-	"crypto/tls"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
@@ -71,9 +70,6 @@ type boltDriver struct {
 	// addr is the connection string
 	addr string
 
-	// tlsConfig is the tls configuration (nil by default)
-	tlsConfig *tls.Config
-
 	// chunkSize is used to set the max chunk size of the bytes to send to Neo4j
 	// at once
 	chunkSize uint16
@@ -120,7 +116,6 @@ func NewDriver(options ...option) Driver {
 		dialTimeout:  time.Second * 5,
 		readTimeout:  time.Second * 60,
 		writeTimeout: time.Second * 60,
-		tlsConfig:    nil,
 		chunkSize:    math.MaxUint16,
 	}
 
