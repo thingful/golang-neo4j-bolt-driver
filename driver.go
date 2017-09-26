@@ -141,6 +141,8 @@ func (d *boltDriver) OpenPool(connStr string, initialCap, maxCap int) (Pool, err
 		return nil, ErrInvalidCapacity
 	}
 
+	d.options.Addr = connStr
+
 	c := &connPool{
 		conns:  make(chan *boltConn, maxCap),
 		driver: d,

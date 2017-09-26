@@ -352,16 +352,21 @@ func (c *boltConn) Close() error {
 	defer c.mu.RUnlock()
 
 	if c.closed {
+		log.Info("conn is already closed")
 		return nil
 	}
 
 	if c.statement != nil {
+		log.Info("closing statement")
+
 		if err := c.statement.Close(); err != nil {
 			return errors.Wrap(err, "Error closing statement when closing connection")
 		}
 	}
 
 	if c.transaction != nil {
+		log.Info("closing transaction")
+
 		if err := c.transaction.Rollback(); err != nil {
 			return errors.Wrap(err, "Error rolling back transaction when closing connection")
 		}
@@ -370,6 +375,7 @@ func (c *boltConn) Close() error {
 	// if we have a pool and there is no error on the connection, put back into
 	// the pool
 	if c.pool != nil && c.connErr == nil {
+		log.Info("we have a pool, so try to return")
 		err := c.pool.put(c)
 		if err != nil {
 			log.Errorf("An error occurred returning connection to pool: %s", err)
@@ -382,6 +388,7 @@ func (c *boltConn) Close() error {
 	err := c.conn.Close()
 	c.closed = true
 	if err != nil {
+		// mark connection as bad
 		c.connErr = errors.Wrap(err, "An error occurred closing the connection")
 		return driver.ErrBadConn
 	}

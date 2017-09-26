@@ -3,6 +3,8 @@ package neo4jbolt
 import (
 	"errors"
 	"sync"
+
+	"github.com/thingful/golang-neo4j-bolt-driver/log"
 )
 
 type Pool interface {
@@ -45,6 +47,7 @@ func (c *connPool) Close() {
 }
 
 func (c *connPool) Get() (Conn, error) {
+	log.Info("Getting conn from pool")
 	conns := c.getConns()
 	if conns == nil {
 		return nil, ErrClosed
@@ -74,6 +77,8 @@ func (c *connPool) put(conn *boltConn) error {
 	if conn == nil {
 		return errors.New("connection is nil, rejecting")
 	}
+
+	log.Info("*********** Putting conn back into pool")
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -110,17 +115,17 @@ func (c *connPool) Len() int { return len(c.getConns()) }
 // to open connections in multiple threads.  The connection objects
 // themselves, and any prepared statements/transactions within ARE NOT
 // THREAD SAFE.
-type DriverPool interface {
-	// OpenPool opens a Neo-specific connection.
-	OpenPool() (Conn, error)
-	reclaim(*boltConn) error
-}
-
-type boltDriverPool struct {
-	connStr  string
-	maxConns int
-	pool     chan *boltConn
-}
+//type DriverPool interface {
+//	// OpenPool opens a Neo-specific connection.
+//	OpenPool() (Conn, error)
+//	reclaim(*boltConn) error
+//}
+//
+//type boltDriverPool struct {
+//	connStr  string
+//	maxConns int
+//	pool     chan *boltConn
+//}
 
 // NewDriverPool creates a new Driver object with connection pooling
 //func NewDriverPool(connStr string, max int) (DriverPool, error) {
