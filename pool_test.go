@@ -13,9 +13,11 @@ func TestBoltDriverPool_OpenNeo(t *testing.T) {
 		t.Skip("Cannot run this test when in recording mode")
 	}
 
-	driver := NewDriver()
+	driver := NewDriver(
+		PoolSize(25),
+	)
 
-	pool, err := driver.OpenPool(neo4jConnStr, 5, 25)
+	pool, err := driver.OpenPool(neo4jConnStr)
 	if err != nil {
 		t.Fatalf("An error occurred opening driver pool: %#v", err)
 	}
@@ -46,9 +48,11 @@ func TestBoltDriverPool_Concurrent(t *testing.T) {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	driver := NewDriver()
+	driver := NewDriver(
+		PoolSize(2),
+	)
 
-	pool, err := driver.OpenPool(neo4jConnStr, 2, 2)
+	pool, err := driver.OpenPool(neo4jConnStr)
 	if err != nil {
 		t.Fatalf("An error occurred opening driver pool: %#v", err)
 	}
@@ -195,9 +199,11 @@ func TestBoltDriverPool_ReclaimBadConn(t *testing.T) {
 		t.Skip("Cannot run this test when in recording mode")
 	}
 
-	driver := NewDriver()
+	driver := NewDriver(
+		PoolSize(1),
+	)
 
-	pool, err := driver.OpenPool(neo4jConnStr, 1, 1)
+	pool, err := driver.OpenPool(neo4jConnStr)
 	if err != nil {
 		t.Fatalf("An error occurred opening driver pool: %#v", err)
 	}
@@ -227,7 +233,6 @@ func TestBoltDriverPool_ReclaimBadConn(t *testing.T) {
 	err = conn.Close()
 	if err == nil {
 		t.Fatal("Expected an error when closing this connection")
-		// t.Fatalf("Got an error closing a bad connection: %s", err)
 	}
 
 	conn, err = pool.Get()

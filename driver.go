@@ -49,7 +49,7 @@ type Driver interface {
 	OpenNeo(connStr string) (Conn, error)
 
 	// OpenPool opens a Neo-specific connection pool.
-	OpenPool(connStr string, initialCap, maxCap int) (Pool, error)
+	OpenPool(connStr string) (Pool, error)
 }
 
 // boltDriver is our concrete driver implementation. Clients will use this
@@ -73,6 +73,9 @@ type boltDriver struct {
 	// chunkSize is used to set the max chunk size of the bytes to send to Neo4j
 	// at once
 	chunkSize uint16
+
+	// poolSize is used to control the size of the connection pool.
+	poolSize int
 }
 
 // option is a type alias for a our functional configuration
@@ -110,8 +113,16 @@ func WriteTimeout(sec float64) option {
 	}
 }
 
+// PoolSize sets the size of the connection pool if used.
+func PoolSize(size int) option {
+	return func(driver *boltDriver) {
+		driver.poolSize = size
+	}
+}
+
 // NewDriver creates a new Driver object
 func NewDriver(options ...option) Driver {
+	// default options
 	driver := &boltDriver{
 		dialTimeout:  time.Second * 5,
 		readTimeout:  time.Second * 60,
@@ -119,6 +130,7 @@ func NewDriver(options ...option) Driver {
 		chunkSize:    math.MaxUint16,
 	}
 
+	// apply any configuration options
 	for _, opt := range options {
 		opt(driver)
 	}
@@ -146,19 +158,15 @@ func (d *boltDriver) OpenNeo(connStr string) (Conn, error) {
 
 // OpenPool opens an returns a new connection pool for interacting with Neo4j.
 // The pool contains the Neo-friendly alternative to sql/driver.
-func (d *boltDriver) OpenPool(connStr string, initialCap, maxCap int) (Pool, error) {
-	if initialCap < 0 || maxCap <= 0 || initialCap > maxCap {
-		return nil, ErrInvalidCapacity
-	}
-
+func (d *boltDriver) OpenPool(connStr string) (Pool, error) {
 	d.addr = connStr
 
 	c := &connPool{
-		conns:  make(chan *boltConn, maxCap),
+		conns:  make(chan *boltConn, d.poolSize),
 		driver: d,
 	}
 
-	for i := 0; i < initialCap; i++ {
+	for i := 0; i < d.poolSize; i++ {
 		conn, err := newBoltConn(d, c)
 		if err != nil {
 			c.Close()
