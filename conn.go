@@ -61,7 +61,7 @@ type Conn interface {
 
 // newBoltConn is our Factory implementation for creating a new bolt connection
 func newBoltConn(driver *boltDriver, pool *connPool) (*boltConn, error) {
-	u, err := parseURL(driver.options.Addr)
+	u, err := parseURL(driver.addr)
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +72,7 @@ func newBoltConn(driver *boltDriver, pool *connPool) (*boltConn, error) {
 	}
 
 	c := &boltConn{
-		options:       driver.options,
+		driver:        driver,
 		url:           u,
 		user:          username,
 		password:      password,
@@ -84,7 +84,7 @@ func newBoltConn(driver *boltDriver, pool *connPool) (*boltConn, error) {
 	log.Trace("Bolt Host: ", u.Host)
 	log.Trace("User: ", username)
 	log.Trace("Password: ", password)
-	log.Trace("TLS Config: ", c.options.TLSConfig)
+	log.Trace("TLS Config: ", c.driver.tlsConfig)
 
 	// initialize the connection
 	err = c.initialize(driver)
@@ -128,20 +128,6 @@ func parseAuth(u *url.URL) (string, string, error) {
 
 	return "", "", nil
 }
-
-//func parseTimeout(u *url.URL) (timeout time.Duration, err error) {
-//	t := u.Query().Get("timeout")
-//	if t != "" {
-//		val, err := strconv.Atoi(t)
-//		if err != nil {
-//			return timeout, errors.New("Invalid format for timeout: %s. Must be integer", timeout)
-//		}
-//
-//		timeout = time.Duration(val) * time.Second
-//	}
-//
-//	return timeout, err
-//}
 
 //func parseTLSConfig(u *url.URL) (*tls.Config, error) {
 //	useTLS = strings.HasPrefix(strings.ToLower(u.Query().Get("tls")), "t") || u.Query().Get("tls") == "1"
@@ -192,7 +178,7 @@ func parseAuth(u *url.URL) (string, string, error) {
 //}
 
 type boltConn struct {
-	options       *DriverOptions
+	driver        *boltDriver
 	url           *url.URL
 	user          string
 	password      string
@@ -206,11 +192,6 @@ type boltConn struct {
 
 	transaction *boltTx
 	statement   *boltStmt
-
-	//openedAt time.Time
-	//usedAt   time.Time
-	//driver     *boltDriver
-	//poolDriver DriverPool
 }
 
 // initialize attempts to actually connect to the Neo4j instance, optionally
@@ -219,7 +200,7 @@ func (c *boltConn) initialize(d *boltDriver) (err error) {
 	// Handle recorder. If there is no conn string, assume we're playing back a
 	// recording.  If there is a recorder and a conn string, assume we're
 	// recording the connection Else, just create the conn normally
-	if c.options.Addr == "" && d != nil && d.recorder != nil {
+	if c.driver.addr == "" && d != nil && d.recorder != nil {
 		c.conn = d.recorder
 	} else if d != nil && d.recorder != nil {
 		d.recorder.Conn, err = c.connect()
@@ -263,13 +244,13 @@ func (c *boltConn) initialize(d *boltDriver) (err error) {
 }
 
 func (c *boltConn) connect() (net.Conn, error) {
-	conn, err := net.DialTimeout("tcp", c.url.Host, c.options.DialTimeout)
+	conn, err := net.DialTimeout("tcp", c.url.Host, c.driver.dialTimeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "An error occurred dialing to neo4j")
 	}
 
-	if c.options.TLSConfig != nil {
-		conn := tls.Client(conn, c.options.TLSConfig)
+	if c.driver.tlsConfig != nil {
+		conn := tls.Client(conn, c.driver.tlsConfig)
 		err = conn.Handshake()
 		if err != nil {
 			return nil, errors.Wrap(err, "An error occurred dialing to neo4j")
@@ -308,7 +289,7 @@ func (c *boltConn) handShake() error {
 
 // Read reads the data from the underlying connection
 func (c *boltConn) Read(b []byte) (n int, err error) {
-	if err := c.conn.SetReadDeadline(time.Now().Add(c.options.ReadTimeout)); err != nil {
+	if err := c.conn.SetReadDeadline(time.Now().Add(c.driver.readTimeout)); err != nil {
 		c.connErr = errors.Wrap(err, "An error occurred setting read deadline")
 		return 0, driver.ErrBadConn
 	}
@@ -328,7 +309,7 @@ func (c *boltConn) Read(b []byte) (n int, err error) {
 
 // Write writes the data to the underlying connection
 func (c *boltConn) Write(b []byte) (n int, err error) {
-	if err := c.conn.SetWriteDeadline(time.Now().Add(c.options.WriteTimeout)); err != nil {
+	if err := c.conn.SetWriteDeadline(time.Now().Add(c.driver.writeTimeout)); err != nil {
 		c.connErr = errors.Wrap(err, "An error occurred setting write deadline")
 		return 0, driver.ErrBadConn
 	}
@@ -400,7 +381,7 @@ func (c *boltConn) ackFailure(failure messages.FailureMessage) error {
 	log.Infof("Acknowledging Failure: %#v", failure)
 
 	ack := messages.NewAckFailureMessage()
-	err := encoding.NewEncoder(c, c.options.ChunkSize).Encode(ack)
+	err := encoding.NewEncoder(c, c.driver.chunkSize).Encode(ack)
 	if err != nil {
 		return errors.Wrap(err, "An error occurred encoding ack failure message")
 	}
@@ -434,7 +415,7 @@ func (c *boltConn) reset() error {
 	log.Info("Resetting session")
 
 	reset := messages.NewResetMessage()
-	err := encoding.NewEncoder(c, c.options.ChunkSize).Encode(reset)
+	err := encoding.NewEncoder(c, c.driver.chunkSize).Encode(reset)
 	if err != nil {
 		return errors.Wrap(err, "An error occurred encoding reset message")
 	}
@@ -603,7 +584,7 @@ func (c *boltConn) sendInit() (interface{}, error) {
 	log.Infof("Sending INIT Message. ClientID: %s User: %s Password: <redacted>", ClientID, c.user)
 
 	initMessage := messages.NewInitMessage(ClientID, c.user, c.password)
-	if err := encoding.NewEncoder(c, c.options.ChunkSize).Encode(initMessage); err != nil {
+	if err := encoding.NewEncoder(c, c.driver.chunkSize).Encode(initMessage); err != nil {
 		return nil, errors.Wrap(err, "An error occurred sending init message")
 	}
 
@@ -613,7 +594,7 @@ func (c *boltConn) sendInit() (interface{}, error) {
 func (c *boltConn) sendRun(query string, args map[string]interface{}) error {
 	log.Infof("Sending RUN message: query %s (args: %#v)", query, args)
 	runMessage := messages.NewRunMessage(query, args)
-	if err := encoding.NewEncoder(c, c.options.ChunkSize).Encode(runMessage); err != nil {
+	if err := encoding.NewEncoder(c, c.driver.chunkSize).Encode(runMessage); err != nil {
 		return errors.Wrap(err, "An error occurred running query")
 	}
 
@@ -632,7 +613,7 @@ func (c *boltConn) sendPullAll() error {
 	log.Infof("Sending PULL_ALL message")
 
 	pullAllMessage := messages.NewPullAllMessage()
-	err := encoding.NewEncoder(c, c.options.ChunkSize).Encode(pullAllMessage)
+	err := encoding.NewEncoder(c, c.driver.chunkSize).Encode(pullAllMessage)
 	if err != nil {
 		return errors.Wrap(err, "An error occurred encoding pull all query")
 	}
@@ -700,7 +681,7 @@ func (c *boltConn) sendDiscardAll() error {
 	log.Infof("Sending DISCARD_ALL message")
 
 	discardAllMessage := messages.NewDiscardAllMessage()
-	err := encoding.NewEncoder(c, c.options.ChunkSize).Encode(discardAllMessage)
+	err := encoding.NewEncoder(c, c.driver.chunkSize).Encode(discardAllMessage)
 	if err != nil {
 		return errors.Wrap(err, "An error occurred encoding discard all query")
 	}

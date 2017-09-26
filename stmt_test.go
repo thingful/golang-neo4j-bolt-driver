@@ -1123,10 +1123,9 @@ func TestBoltStmt_SelectMapLimits(t *testing.T) {
 }
 
 func TestBoltStmt_ManyChunks(t *testing.T) {
-	options := DefaultDriverOptions()
-	options.ChunkSize = 10
-
-	driver := NewDriverWithOptions(options)
+	driver := NewDriver(
+		ChunkSize(10),
+	)
 
 	// Records session for testing
 	driver.(*boltDriver).recorder = newRecorder("TestBoltStmt_ManyChunks", neo4jConnStr)

@@ -53,72 +53,87 @@ type Driver interface {
 	OpenPool(connStr string, initialCap, maxCap int) (Pool, error)
 }
 
-type DriverOptions struct {
-	// DialTimeout is the timeout for establishing new connections
-	DialTimeout time.Duration
+// boltDriver is our concrete driver implementation. Clients will use this
+// instance to get connections to Neo4j
+type boltDriver struct {
+	recorder *recorder
+	//options  *DriverOptions
 
-	// ReadTimeout is the timeout for socket reads.
-	ReadTimeout time.Duration
+	// dialTimeout is the timeout for establishing new connections
+	dialTimeout time.Duration
 
-	// WriteTimeout is the timeout for socket writes.
-	WriteTimeout time.Duration
+	// readTimeout is the timeout for socket reads.
+	readTimeout time.Duration
 
-	// Addr is the connection string
-	Addr string
+	// writeTimeout is the timeout for socket writes.
+	writeTimeout time.Duration
 
-	// TLSConfig is the tls configuration (nil by default)
-	TLSConfig *tls.Config
+	// addr is the connection string
+	addr string
 
-	// ChunkSize is used to set the max chunk size of the bytes to send to Neo4j
+	// tlsConfig is the tls configuration (nil by default)
+	tlsConfig *tls.Config
+
+	// chunkSize is used to set the max chunk size of the bytes to send to Neo4j
 	// at once
-	ChunkSize uint16
+	chunkSize uint16
 }
 
-// String is our stringer implementation for DriverOptions
-func (d *DriverOptions) String() string {
-	return fmt.Sprintf(
-		"{dial timeout: %s, read timeout: %s, write timeout: %s, address: %s, chunk size: %v}",
-		d.DialTimeout,
-		d.ReadTimeout,
-		d.WriteTimeout,
-		d.Addr,
-		d.ChunkSize,
-	)
-}
+// option is a type alias for a our functional configuration
+type option func(*boltDriver)
 
-func DefaultDriverOptions() *DriverOptions {
-	return &DriverOptions{
-		DialTimeout:  time.Second * 5,
-		ReadTimeout:  time.Second * 60,
-		WriteTimeout: time.Second * 60,
-		TLSConfig:    nil,
-		ChunkSize:    math.MaxUint16,
+// ChunkSize is a on option that sets the chunksize we use to write data to
+// Neo4j
+func ChunkSize(chunkSize uint16) option {
+	return func(driver *boltDriver) {
+		driver.chunkSize = chunkSize
 	}
 }
 
-type boltDriver struct {
-	recorder *recorder
-	options  *DriverOptions
+// DialTimeout sets the dial timeout in seconds we should wait to connect to to
+// Neo4j
+func DialTimeout(sec float64) option {
+	return func(driver *boltDriver) {
+		driver.dialTimeout = time.Duration(sec) * time.Second
+	}
+}
+
+// ReadTimeout sets the dial timeout in seconds we should wait to read data
+// from Neo4j
+func ReadTimeout(sec float64) option {
+	return func(driver *boltDriver) {
+		driver.readTimeout = time.Duration(sec) * time.Second
+	}
+}
+
+// WriteTimeout sets the dial timeout in seconds we should wait to write data
+// to Neo4j
+func WriteTimeout(sec float64) option {
+	return func(driver *boltDriver) {
+		driver.writeTimeout = time.Duration(sec) * time.Second
+	}
 }
 
 // NewDriver creates a new Driver object
-func NewDriver() Driver {
-	return NewDriverWithOptions(DefaultDriverOptions())
-}
-
-func NewDriverWithOptions(options *DriverOptions) Driver {
-	return &boltDriver{
-		options: options,
+func NewDriver(options ...option) Driver {
+	driver := &boltDriver{
+		dialTimeout:  time.Second * 5,
+		readTimeout:  time.Second * 60,
+		writeTimeout: time.Second * 60,
+		tlsConfig:    nil,
+		chunkSize:    math.MaxUint16,
 	}
+
+	for _, opt := range options {
+		opt(driver)
+	}
+
+	return driver
 }
 
 // Open opens a new Bolt connection to the Neo4J database
 func (d *boltDriver) Open(connStr string) (driver.Conn, error) {
-	if d.options == nil {
-		d.options = DefaultDriverOptions()
-	}
-
-	d.options.Addr = connStr
+	d.addr = connStr
 
 	return newBoltConn(d, nil) // Never use pooling when using SQL driver
 }
@@ -141,7 +156,7 @@ func (d *boltDriver) OpenPool(connStr string, initialCap, maxCap int) (Pool, err
 		return nil, ErrInvalidCapacity
 	}
 
-	d.options.Addr = connStr
+	d.addr = connStr
 
 	c := &connPool{
 		conns:  make(chan *boltConn, maxCap),
@@ -161,5 +176,5 @@ func (d *boltDriver) OpenPool(connStr string, initialCap, maxCap int) (Pool, err
 }
 
 func init() {
-	sql.Register("neo4j-bolt", &boltDriver{})
+	sql.Register("neo4j-bolt", NewDriver())
 }
