@@ -3,9 +3,10 @@ package neo4jbolt
 import (
 	"database/sql"
 	"database/sql/driver"
-	"fmt"
 	"math"
 	"time"
+
+	"github.com/pkg/errors"
 )
 
 const (
@@ -172,7 +173,7 @@ func (d *boltDriver) OpenPool(connStr string) (Pool, error) {
 		conn, err := newBoltConn(d, c)
 		if err != nil {
 			c.Close()
-			return nil, fmt.Errorf("unable to fill the pool: %v", err)
+			return nil, errors.Wrap(err, "Error opening connection while initializing pool")
 		}
 		c.conns <- conn
 	}
