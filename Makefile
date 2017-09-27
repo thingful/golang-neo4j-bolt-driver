@@ -16,4 +16,4 @@ godoc:
 
 .PHONY: neo4j
 neo4j:
-	docker run --publish=7474:7474 --publish=7687:7687 --env=NEO4J_AUTH=none --rm neo4j:3.1.0
+	docker run --publish=8474:7474 --publish=8687:7687 --env=NEO4J_AUTH=none --rm neo4j:3.1.0
