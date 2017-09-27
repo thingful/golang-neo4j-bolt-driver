@@ -137,6 +137,9 @@ func parseAuth(u *url.URL) (string, string, error) {
 	return "", "", nil
 }
 
+// parseTLSConfig attempts to parse tls variables in the connection string, and
+// initialize tls.Config based on this data.
+// TODO: figure out a way of testing this
 func parseTLSConfig(u *url.URL) (*tls.Config, error) {
 	useTLS := strings.HasPrefix(strings.ToLower(u.Query().Get("tls")), "t") ||
 		u.Query().Get("tls") == "1"
@@ -184,6 +187,7 @@ func parseTLSConfig(u *url.URL) (*tls.Config, error) {
 		RootCAs:            caCertPool,
 		Certificates:       []tls.Certificate{cert},
 		InsecureSkipVerify: tlsNoVerify,
+		ServerName:         u.Host,
 	}, nil
 }
 
