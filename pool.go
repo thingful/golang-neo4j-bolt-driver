@@ -1,8 +1,9 @@
 package neo4jbolt
 
 import (
-	"errors"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/thingful/golang-neo4j-bolt-driver/log"
 )
@@ -64,7 +65,7 @@ func (c *connPool) Get() (Conn, error) {
 	default:
 		conn, err = newBoltConn(c.driver, c)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "Error getting new connection from pool")
 		}
 	}
 

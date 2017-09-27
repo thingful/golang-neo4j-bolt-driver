@@ -1,7 +1,8 @@
 package neo4jbolt
 
 import (
-	"github.com/thingful/golang-neo4j-bolt-driver/errors"
+	"github.com/pkg/errors"
+
 	"github.com/thingful/golang-neo4j-bolt-driver/log"
 	"github.com/thingful/golang-neo4j-bolt-driver/structures/messages"
 )
@@ -43,14 +44,14 @@ func (t *boltTx) Commit() error {
 
 	success, ok := successInt.(messages.SuccessMessage)
 	if !ok {
-		return errors.New("Unrecognized response type committing transaction: %#v", success)
+		return errors.Errorf("Unrecognized response type committing transaction: %#v", success)
 	}
 
 	log.Infof("Got success message committing transaction: %#v", success)
 
 	pull, ok := pullInt.(messages.SuccessMessage)
 	if !ok {
-		return errors.New("Unrecognized response type pulling transaction:  %#v", pull)
+		return errors.Errorf("Unrecognized response type pulling transaction:  %#v", pull)
 	}
 
 	log.Infof("Got success message pulling transaction: %#v", pull)
@@ -78,14 +79,14 @@ func (t *boltTx) Rollback() error {
 
 	success, ok := successInt.(messages.SuccessMessage)
 	if !ok {
-		return errors.New("Unrecognized response type rolling back transaction: %#v", success)
+		return errors.Errorf("Unrecognized response type rolling back transaction: %#v", success)
 	}
 
 	log.Infof("Got success message rolling back transaction: %#v", success)
 
 	pull, ok := pullInt.(messages.SuccessMessage)
 	if !ok {
-		return errors.New("Unrecognized response type pulling transaction: %#v", pull)
+		return errors.Errorf("Unrecognized response type pulling transaction: %#v", pull)
 	}
 
 	log.Infof("Got success message pulling transaction: %#v", pull)

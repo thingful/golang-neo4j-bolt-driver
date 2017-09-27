@@ -1,6 +1,6 @@
 package neo4jbolt
 
-import "github.com/thingful/golang-neo4j-bolt-driver/errors"
+import "github.com/pkg/errors"
 
 // Result represents a result from a query that returns no data
 type Result interface {
@@ -41,7 +41,7 @@ func (r boltResult) LastInsertId() (int64, error) {
 func (r boltResult) RowsAffected() (int64, error) {
 	stats, ok := r.metadata["stats"].(map[string]interface{})
 	if !ok {
-		return -1, errors.New("Unrecognized type for stats metadata: %#v", r.metadata)
+		return -1, errors.Errorf("Unrecognized type for stats metadata: %#v", r.metadata)
 	}
 
 	var rowsAffected int64

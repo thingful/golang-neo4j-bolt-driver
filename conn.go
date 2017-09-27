@@ -13,8 +13,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/thingful/golang-neo4j-bolt-driver/encoding"
-	"github.com/thingful/golang-neo4j-bolt-driver/errors"
 	"github.com/thingful/golang-neo4j-bolt-driver/log"
 	"github.com/thingful/golang-neo4j-bolt-driver/structures/messages"
 )
@@ -114,7 +115,7 @@ func parseURL(addr string) (*url.URL, error) {
 	}
 
 	if strings.ToLower(u.Scheme) != "bolt" {
-		return nil, errors.New("Unsupported connection string scheme: %s. Driver only supports 'bolt'", u.Scheme)
+		return nil, errors.Errorf("Unsupported connection string scheme: %s. Driver only supports 'bolt'", u.Scheme)
 	}
 
 	return u, nil
@@ -247,7 +248,7 @@ func (c *boltConn) initialize(d *boltDriver) (err error) {
 		return nil
 	default:
 		log.Errorf("Got an unrecognized message when initializing connection :%+v", resp)
-		c.connErr = errors.New("Unrecognized response from the server: %#v", resp)
+		c.connErr = errors.Errorf("Unrecognized response from the server: %#v", resp)
 		c.Close()
 		return driver.ErrBadConn
 	}
@@ -414,7 +415,7 @@ func (c *boltConn) ackFailure(failure messages.FailureMessage) error {
 			return c.reset()
 		default:
 			log.Errorf("Got unrecognized response from acking failure: %#v", resp)
-			c.connErr = errors.New("Got unrecognized response from acking failure: %#v. CLOSING SESSION!", resp)
+			c.connErr = errors.Errorf("Got unrecognized response from acking failure: %#v. CLOSING SESSION!", resp)
 			c.Close()
 			return driver.ErrBadConn
 		}
@@ -452,7 +453,7 @@ func (c *boltConn) reset() error {
 			return errors.Wrap(resp, "Error resetting session. CLOSING SESSION!")
 		default:
 			log.Errorf("Got unrecognized response from resetting session: %#v", resp)
-			c.connErr = errors.New("Got unrecognized response from resetting session: %#v. CLOSING SESSION!", resp)
+			c.connErr = errors.Errorf("Got unrecognized response from resetting session: %#v. CLOSING SESSION!", resp)
 			c.Close()
 			return driver.ErrBadConn
 		}
@@ -511,14 +512,14 @@ func (c *boltConn) Begin() (driver.Tx, error) {
 
 	success, ok := successInt.(messages.SuccessMessage)
 	if !ok {
-		return nil, errors.New("Unrecognized response type beginning transaction: %#v", success)
+		return nil, errors.Errorf("Unrecognized response type beginning transaction: %#v", success)
 	}
 
 	log.Infof("Got success message beginning transaction: %#v", success)
 
 	success, ok = pullInt.(messages.SuccessMessage)
 	if !ok {
-		return nil, errors.New("Unrecognized response type pulling transaction:  %#v", success)
+		return nil, errors.Errorf("Unrecognized response type pulling transaction:  %#v", success)
 	}
 
 	log.Infof("Got success message pulling transaction: %#v", success)
@@ -766,7 +767,7 @@ func (c *boltConn) queryNeo(query string, params map[string]interface{}) (*boltR
 	}
 	success, ok := successResp.(messages.SuccessMessage)
 	if !ok {
-		return nil, errors.New("Unexpected response querying neo from connection: %#v", successResp)
+		return nil, errors.Errorf("Unexpected response querying neo from connection: %#v", successResp)
 	}
 
 	c.statement.rows = newQueryRows(c.statement, success.Metadata)

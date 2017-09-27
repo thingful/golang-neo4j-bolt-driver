@@ -8,8 +8,9 @@ import (
 	"os"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/thingful/golang-neo4j-bolt-driver/encoding"
-	"github.com/thingful/golang-neo4j-bolt-driver/errors"
 	"github.com/thingful/golang-neo4j-bolt-driver/log"
 )
 
@@ -70,16 +71,16 @@ func (r *recorder) Read(b []byte) (n int, err error) {
 	}
 
 	if r.currentEvent >= len(r.events) {
-		return 0, errors.New("Trying to read past all of the events in the recorder! %#v", r)
+		return 0, errors.Errorf("Trying to read past all of the events in the recorder! %#v", r)
 	}
 	event := r.events[r.currentEvent]
 	if event.IsWrite {
-		return 0, errors.New("Recorder expected Read, got Write! %#v, Event: %#v", r, event)
+		return 0, errors.Errorf("Recorder expected Read, got Write! %#v, Event: %#v", r, event)
 	}
 
 	for i := 0; i < len(b); i++ {
 		if len(event.Event) == 0 {
-			return i, errors.New("Attempted to read past current event in recorder! Bytes: %s. Recorder %#v, Event; %#v", b, r, event)
+			return i, errors.Errorf("Attempted to read past current event in recorder! Bytes: %s. Recorder %#v, Event; %#v", b, r, event)
 		}
 		b[i] = event.Event[0]
 		event.Event = event.Event[1:]
@@ -102,11 +103,11 @@ func (r *recorder) Close() error {
 		return r.Conn.Close()
 	} else if len(r.events) > 0 {
 		if r.currentEvent != len(r.events) {
-			return errors.New("Didn't read all of the events in the recorder on close! %#v", r)
+			return errors.Errorf("Didn't read all of the events in the recorder on close! %#v", r)
 		}
 
 		if len(r.events[len(r.events)-1].Event) != 0 {
-			return errors.New("Left data in an event in the recorder on close! %#v", r)
+			return errors.Errorf("Left data in an event in the recorder on close! %#v", r)
 		}
 
 		return nil
@@ -131,16 +132,16 @@ func (r *recorder) Write(b []byte) (n int, err error) {
 	}
 
 	if r.currentEvent >= len(r.events) {
-		return 0, errors.New("Trying to write past all of the events in the recorder! %#v", r)
+		return 0, errors.Errorf("Trying to write past all of the events in the recorder! %#v", r)
 	}
 	event := r.events[r.currentEvent]
 	if !event.IsWrite {
-		return 0, errors.New("Recorder expected Write, got Read! %#v, Event: %#v", r, event)
+		return 0, errors.Errorf("Recorder expected Write, got Read! %#v, Event: %#v", r, event)
 	}
 
 	for i := 0; i < len(b); i++ {
 		if len(event.Event) == 0 {
-			return i, errors.New("Attempted to write past current event in recorder! %#v, Event: %#v", r, event)
+			return i, errors.Errorf("Attempted to write past current event in recorder! %#v, Event: %#v", r, event)
 		}
 		event.Event = event.Event[1:]
 	}

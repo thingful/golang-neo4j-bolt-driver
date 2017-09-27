@@ -3,7 +3,8 @@ package neo4jbolt
 import (
 	"database/sql/driver"
 
-	"github.com/thingful/golang-neo4j-bolt-driver/errors"
+	"github.com/pkg/errors"
+
 	"github.com/thingful/golang-neo4j-bolt-driver/log"
 	"github.com/thingful/golang-neo4j-bolt-driver/structures/messages"
 )
@@ -103,7 +104,7 @@ func (s *boltStmt) ExecNeo(params map[string]interface{}) (Result, error) {
 
 	success, ok := runResp.(messages.SuccessMessage)
 	if !ok {
-		return nil, errors.New("Unrecognized response type when running exec query: %#v", success)
+		return nil, errors.Errorf("Unrecognized response type when running exec query: %#v", success)
 
 	}
 
@@ -111,7 +112,7 @@ func (s *boltStmt) ExecNeo(params map[string]interface{}) (Result, error) {
 
 	success, ok = pullResp.(messages.SuccessMessage)
 	if !ok {
-		return nil, errors.New("Unrecognized response when discarding exec rows: %#v", success)
+		return nil, errors.Errorf("Unrecognized response when discarding exec rows: %#v", success)
 	}
 
 	log.Infof("Got discard all success message: %#v", success)
@@ -134,7 +135,7 @@ func (s *boltStmt) ExecPipeline(params ...map[string]interface{}) ([]Result, err
 	for i, query := range s.queries {
 		err := s.conn.sendRunPullAll(query, params[i])
 		if err != nil {
-			return nil, errors.Wrap(err, "Error running exec query:\n\n%s\n\nWith Params:\n%#v", query, params[i])
+			return nil, errors.Wrapf(err, "Error running exec query:\n\n%s\n\nWith Params:\n%#v", query, params[i])
 		}
 	}
 
@@ -144,22 +145,22 @@ func (s *boltStmt) ExecPipeline(params ...map[string]interface{}) ([]Result, err
 	for i := range s.queries {
 		runResp, err := s.conn.consume()
 		if err != nil {
-			return nil, errors.Wrap(err, "An error occurred getting result of exec command: %#v", runResp)
+			return nil, errors.Wrapf(err, "An error occurred getting result of exec command: %#v", runResp)
 		}
 
 		success, ok := runResp.(messages.SuccessMessage)
 		if !ok {
-			return nil, errors.New("Unexpected response when getting exec query result: %#v", runResp)
+			return nil, errors.Errorf("Unexpected response when getting exec query result: %#v", runResp)
 		}
 
 		_, pullResp, err := s.conn.consumeAll()
 		if err != nil {
-			return nil, errors.Wrap(err, "An error occurred getting result of exec discard command: %#v", pullResp)
+			return nil, errors.Wrapf(err, "An error occurred getting result of exec discard command: %#v", pullResp)
 		}
 
 		success, ok = pullResp.(messages.SuccessMessage)
 		if !ok {
-			return nil, errors.New("Unexpected response when getting exec query discard result: %#v", pullResp)
+			return nil, errors.Errorf("Unexpected response when getting exec query discard result: %#v", pullResp)
 		}
 
 		results[i] = newResult(success.Metadata)
@@ -199,7 +200,7 @@ func (s *boltStmt) queryNeo(params map[string]interface{}) (*boltRows, error) {
 
 	resp, ok := respInt.(messages.SuccessMessage)
 	if !ok {
-		return nil, errors.New("Unrecognized response type running query: %#v", resp)
+		return nil, errors.Errorf("Unrecognized response type running query: %#v", resp)
 	}
 
 	log.Infof("Got success message on run query: %#v", resp)
@@ -222,7 +223,7 @@ func (s *boltStmt) QueryPipeline(params ...map[string]interface{}) (PipelineRows
 	for i, query := range s.queries {
 		err := s.conn.sendRunPullAll(query, params[i])
 		if err != nil {
-			return nil, errors.Wrap(err, "Error running query:\n\n%s\n\nWith Params:\n%#v", query, params[i])
+			return nil, errors.Wrapf(err, "Error running query:\n\n%s\n\nWith Params:\n%#v", query, params[i])
 		}
 	}
 
@@ -235,7 +236,7 @@ func (s *boltStmt) QueryPipeline(params ...map[string]interface{}) (PipelineRows
 
 	success, ok := resp.(messages.SuccessMessage)
 	if !ok {
-		return nil, errors.New("Got unexpected return message when consuming initial pipeline command: %#v", resp)
+		return nil, errors.Errorf("Got unexpected return message when consuming initial pipeline command: %#v", resp)
 	}
 
 	s.rows = newPipelineRows(s, success.Metadata, 0)

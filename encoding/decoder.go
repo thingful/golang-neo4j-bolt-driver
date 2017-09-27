@@ -5,7 +5,8 @@ import (
 	"encoding/binary"
 	"io"
 
-	"github.com/thingful/golang-neo4j-bolt-driver/errors"
+	"github.com/pkg/errors"
+
 	"github.com/thingful/golang-neo4j-bolt-driver/structures/graph"
 	"github.com/thingful/golang-neo4j-bolt-driver/structures/messages"
 )
@@ -42,7 +43,7 @@ func (d Decoder) read() (*bytes.Buffer, error) {
 	for {
 		lengthBytes := make([]byte, 2)
 		if numRead, err := io.ReadFull(d.r, lengthBytes); numRead != 2 {
-			return nil, errors.Wrap(err, "Couldn't read expected bytes for message length. Read: %d Expected: 2.", numRead)
+			return nil, errors.Wrapf(err, "Couldn't read expected bytes for message length. Read: %d Expected: 2.", numRead)
 		}
 
 		// Chunk header contains length of current message
@@ -54,12 +55,12 @@ func (d Decoder) read() (*bytes.Buffer, error) {
 
 		data, err := d.readData(messageLen)
 		if err != nil {
-			return output, errors.Wrap(err, "An error occurred reading message data")
+			return output, errors.Wrapf(err, "An error occurred reading message data")
 		}
 
 		numWritten, err := output.Write(data)
 		if numWritten < len(data) {
-			return output, errors.New("Didn't write full data on output. Expected: %d Wrote: %d", len(data), numWritten)
+			return output, errors.Errorf("Didn't write full data on output. Expected: %d Wrote: %d", len(data), numWritten)
 		} else if err != nil {
 			return output, errors.Wrap(err, "Error writing data to output")
 		}
@@ -75,7 +76,7 @@ func (d Decoder) readData(messageLen uint16) ([]byte, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "An error occurred reading from stream")
 		} else if numRead == 0 {
-			return nil, errors.Wrap(err, "Couldn't read expected bytes for message. Read: %d Expected: %d.", totalRead, messageLen)
+			return nil, errors.Wrapf(err, "Couldn't read expected bytes for message. Read: %d Expected: %d.", totalRead, messageLen)
 		}
 
 		for idx, b := range data {
@@ -241,7 +242,7 @@ func (d Decoder) decode(buffer *bytes.Buffer) (interface{}, error) {
 		return d.decodeStruct(buffer, int(size))
 
 	default:
-		return nil, errors.New("Unrecognized marker byte!: %x", marker)
+		return nil, errors.Errorf("Unrecognized marker byte!: %x", marker)
 	}
 
 }
@@ -273,7 +274,7 @@ func (d Decoder) decodeMap(buffer *bytes.Buffer, size int) (map[string]interface
 
 		key, ok := keyInt.(string)
 		if !ok {
-			return nil, errors.New("Unexpected key type: %T with value %+v", keyInt, keyInt)
+			return nil, errors.Errorf("Unexpected key type: %T with value %+v", keyInt, keyInt)
 		}
 		mapp[key] = val
 	}
@@ -314,7 +315,7 @@ func (d Decoder) decodeStruct(buffer *bytes.Buffer, size int) (interface{}, erro
 	case messages.ResetMessageSignature:
 		return d.decodeResetMessage(buffer)
 	default:
-		return nil, errors.New("Unrecognized type decoding struct with signature %x", signature)
+		return nil, errors.Errorf("Unrecognized type decoding struct with signature %x", signature)
 	}
 }
 
@@ -333,7 +334,7 @@ func (d Decoder) decodeNode(buffer *bytes.Buffer) (graph.Node, error) {
 	}
 	labelIntSlice, ok := labelInt.([]interface{})
 	if !ok {
-		return node, errors.New("Expected: Labels []string, but got %T %+v", labelInt, labelInt)
+		return node, errors.Errorf("Expected: Labels []string, but got %T %+v", labelInt, labelInt)
 	}
 	node.Labels, err = sliceInterfaceToString(labelIntSlice)
 	if err != nil {
@@ -346,7 +347,7 @@ func (d Decoder) decodeNode(buffer *bytes.Buffer) (graph.Node, error) {
 	}
 	node.Properties, ok = propertiesInt.(map[string]interface{})
 	if !ok {
-		return node, errors.New("Expected: Properties map[string]interface{}, but got %T %+v", propertiesInt, propertiesInt)
+		return node, errors.Errorf("Expected: Properties map[string]interface{}, but got %T %+v", propertiesInt, propertiesInt)
 	}
 
 	return node, nil
@@ -381,7 +382,7 @@ func (d Decoder) decodeRelationship(buffer *bytes.Buffer) (graph.Relationship, e
 	}
 	rel.Type, ok = typeInt.(string)
 	if !ok {
-		return rel, errors.New("Expected: Type string, but got %T %+v", typeInt, typeInt)
+		return rel, errors.Errorf("Expected: Type string, but got %T %+v", typeInt, typeInt)
 	}
 
 	propertiesInt, err := d.decode(buffer)
@@ -390,7 +391,7 @@ func (d Decoder) decodeRelationship(buffer *bytes.Buffer) (graph.Relationship, e
 	}
 	rel.Properties, ok = propertiesInt.(map[string]interface{})
 	if !ok {
-		return rel, errors.New("Expected: Properties map[string]interface{}, but got %T %+v", propertiesInt, propertiesInt)
+		return rel, errors.Errorf("Expected: Properties map[string]interface{}, but got %T %+v", propertiesInt, propertiesInt)
 	}
 
 	return rel, nil
@@ -405,7 +406,7 @@ func (d Decoder) decodePath(buffer *bytes.Buffer) (graph.Path, error) {
 	}
 	nodesIntSlice, ok := nodesInt.([]interface{})
 	if !ok {
-		return path, errors.New("Expected: Nodes []Node, but got %T %+v", nodesInt, nodesInt)
+		return path, errors.Errorf("Expected: Nodes []Node, but got %T %+v", nodesInt, nodesInt)
 	}
 	path.Nodes, err = sliceInterfaceToNode(nodesIntSlice)
 	if err != nil {
@@ -418,7 +419,7 @@ func (d Decoder) decodePath(buffer *bytes.Buffer) (graph.Path, error) {
 	}
 	relsIntSlice, ok := relsInt.([]interface{})
 	if !ok {
-		return path, errors.New("Expected: Relationships []Relationship, but got %T %+v", relsInt, relsInt)
+		return path, errors.Errorf("Expected: Relationships []Relationship, but got %T %+v", relsInt, relsInt)
 	}
 	path.Relationships, err = sliceInterfaceToUnboundRelationship(relsIntSlice)
 	if err != nil {
@@ -431,7 +432,7 @@ func (d Decoder) decodePath(buffer *bytes.Buffer) (graph.Path, error) {
 	}
 	seqIntSlice, ok := seqInt.([]interface{})
 	if !ok {
-		return path, errors.New("Expected: Sequence []int, but got %T %+v", seqInt, seqInt)
+		return path, errors.Errorf("Expected: Sequence []int, but got %T %+v", seqInt, seqInt)
 	}
 	path.Sequence, err = sliceInterfaceToInt(seqIntSlice)
 
@@ -454,7 +455,7 @@ func (d Decoder) decodeUnboundRelationship(buffer *bytes.Buffer) (graph.UnboundR
 	}
 	rel.Type, ok = typeInt.(string)
 	if !ok {
-		return rel, errors.New("Expected: Type string, but got %T %+v", typeInt, typeInt)
+		return rel, errors.Errorf("Expected: Type string, but got %T %+v", typeInt, typeInt)
 	}
 
 	propertiesInt, err := d.decode(buffer)
@@ -463,7 +464,7 @@ func (d Decoder) decodeUnboundRelationship(buffer *bytes.Buffer) (graph.UnboundR
 	}
 	rel.Properties, ok = propertiesInt.(map[string]interface{})
 	if !ok {
-		return rel, errors.New("Expected: Properties map[string]interface{}, but got %T %+v", propertiesInt, propertiesInt)
+		return rel, errors.Errorf("Expected: Properties map[string]interface{}, but got %T %+v", propertiesInt, propertiesInt)
 	}
 
 	return rel, nil
@@ -476,7 +477,7 @@ func (d Decoder) decodeRecordMessage(buffer *bytes.Buffer) (messages.RecordMessa
 	}
 	fields, ok := fieldsInt.([]interface{})
 	if !ok {
-		return messages.RecordMessage{}, errors.New("Expected: Fields []interface{}, but got %T %+v", fieldsInt, fieldsInt)
+		return messages.RecordMessage{}, errors.Errorf("Expected: Fields []interface{}, but got %T %+v", fieldsInt, fieldsInt)
 	}
 
 	return messages.NewRecordMessage(fields), nil
@@ -489,7 +490,7 @@ func (d Decoder) decodeFailureMessage(buffer *bytes.Buffer) (messages.FailureMes
 	}
 	metadata, ok := metadataInt.(map[string]interface{})
 	if !ok {
-		return messages.FailureMessage{}, errors.New("Expected: Metadata map[string]interface{}, but got %T %+v", metadataInt, metadataInt)
+		return messages.FailureMessage{}, errors.Errorf("Expected: Metadata map[string]interface{}, but got %T %+v", metadataInt, metadataInt)
 	}
 
 	return messages.NewFailureMessage(metadata), nil
@@ -506,7 +507,7 @@ func (d Decoder) decodeSuccessMessage(buffer *bytes.Buffer) (messages.SuccessMes
 	}
 	metadata, ok := metadataInt.(map[string]interface{})
 	if !ok {
-		return messages.SuccessMessage{}, errors.New("Expected: Metadata map[string]interface{}, but got %T %+v", metadataInt, metadataInt)
+		return messages.SuccessMessage{}, errors.Errorf("Expected: Metadata map[string]interface{}, but got %T %+v", metadataInt, metadataInt)
 	}
 
 	return messages.NewSuccessMessage(metadata), nil

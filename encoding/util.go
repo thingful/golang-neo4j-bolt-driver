@@ -1,7 +1,8 @@
 package encoding
 
 import (
-	"github.com/thingful/golang-neo4j-bolt-driver/errors"
+	"github.com/pkg/errors"
+
 	"github.com/thingful/golang-neo4j-bolt-driver/structures/graph"
 )
 
@@ -10,7 +11,7 @@ func sliceInterfaceToString(from []interface{}) ([]string, error) {
 	for idx, item := range from {
 		toItem, ok := item.(string)
 		if !ok {
-			return nil, errors.New("Expected string value. Got %T %+v", item, item)
+			return nil, errors.Errorf("Expected string value. Got %T %+v", item, item)
 		}
 		to[idx] = toItem
 	}
@@ -30,7 +31,7 @@ func sliceInterfaceToNode(from []interface{}) ([]graph.Node, error) {
 	for idx, item := range from {
 		toItem, ok := item.(graph.Node)
 		if !ok {
-			return nil, errors.New("Expected Node value. Got %T %+v", item, item)
+			return nil, errors.Errorf("Expected Node value. Got %T %+v", item, item)
 		}
 		to[idx] = toItem
 	}
@@ -42,7 +43,7 @@ func sliceInterfaceToRelationship(from []interface{}) ([]graph.Relationship, err
 	for idx, item := range from {
 		toItem, ok := item.(graph.Relationship)
 		if !ok {
-			return nil, errors.New("Expected Relationship value. Got %T %+v", item, item)
+			return nil, errors.Errorf("Expected Relationship value. Got %T %+v", item, item)
 		}
 		to[idx] = toItem
 	}
@@ -54,7 +55,7 @@ func sliceInterfaceToUnboundRelationship(from []interface{}) ([]graph.UnboundRel
 	for idx, item := range from {
 		toItem, ok := item.(graph.UnboundRelationship)
 		if !ok {
-			return nil, errors.New("Expected UnboundRelationship value. Got %T %+v", item, item)
+			return nil, errors.Errorf("Expected UnboundRelationship value. Got %T %+v", item, item)
 		}
 		to[idx] = toItem
 	}

@@ -5,7 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/thingful/golang-neo4j-bolt-driver/errors"
+	"github.com/pkg/errors"
+
 	"github.com/thingful/golang-neo4j-bolt-driver/structures/messages"
 )
 
@@ -239,7 +240,12 @@ func TestBoltConn_FailureMessageError(t *testing.T) {
 	}
 
 	code := "Neo.ClientError.Statement.SyntaxError"
-	if err.(*errors.Error).InnerMost().(messages.FailureMessage).Metadata["code"] != code {
-		t.Fatalf("Expected error message code %s, but got %v", code, err.(*errors.Error).InnerMost().(messages.FailureMessage).Metadata["code"])
+	ex, ok := errors.Cause(err).(messages.FailureMessage)
+	if ok {
+		if ex.Metadata["code"] != code {
+			t.Fatalf("Expected error message code %s, but got %s", code, ex.Metadata["code"])
+		}
+	} else {
+		t.Fatalf("Unexpected error type: %v", err)
 	}
 }

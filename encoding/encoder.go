@@ -7,7 +7,8 @@ import (
 
 	"bytes"
 
-	"github.com/thingful/golang-neo4j-bolt-driver/errors"
+	"github.com/pkg/errors"
+
 	"github.com/thingful/golang-neo4j-bolt-driver/structures"
 )
 
@@ -191,7 +192,7 @@ func (e Encoder) encode(iVal interface{}) error {
 		err = e.encodeInt(int64(val))
 	case uint64:
 		if val > math.MaxInt64 {
-			return errors.New("Integer too big: %d. Max integer supported: %d", val, int64(math.MaxInt64))
+			return errors.Errorf("Integer too big: %d. Max integer supported: %d", val, int64(math.MaxInt64))
 		}
 		err = e.encodeInt(int64(val))
 	case float32:
@@ -207,7 +208,7 @@ func (e Encoder) encode(iVal interface{}) error {
 	case structures.Structure:
 		err = e.encodeStructure(val)
 	default:
-		return errors.New("Unrecognized type when encoding data for Bolt transport: %T %+v", val, val)
+		return errors.Errorf("Unrecognized type when encoding data for Bolt transport: %T %+v", val, val)
 	}
 
 	return err
@@ -277,7 +278,7 @@ func (e Encoder) encodeInt(val int64) error {
 		}
 		err = binary.Write(e, binary.BigEndian, val)
 	default:
-		return errors.New("Int too long to write: %d", val)
+		return errors.Errorf("Int too long to write: %d", val)
 	}
 	if err != nil {
 		return errors.Wrap(err, "An error occured writing an int to bolt")
@@ -334,7 +335,7 @@ func (e Encoder) encodeString(val string) error {
 		}
 		_, err = e.Write(bytes)
 	default:
-		return errors.New("String too long to write: %s", val)
+		return errors.Errorf("String too long to write: %s", val)
 	}
 	return err
 }
@@ -368,7 +369,7 @@ func (e Encoder) encodeSlice(val []interface{}) error {
 			return err
 		}
 	default:
-		return errors.New("Slice too long to write: %+v", val)
+		return errors.Errorf("Slice too long to write: %+v", val)
 	}
 
 	// Encode Slice values
@@ -410,7 +411,7 @@ func (e Encoder) encodeMap(val map[string]interface{}) error {
 			return err
 		}
 	default:
-		return errors.New("Map too long to write: %+v", val)
+		return errors.Errorf("Map too long to write: %+v", val)
 	}
 
 	// Encode Map values
@@ -450,7 +451,7 @@ func (e Encoder) encodeStructure(val structures.Structure) error {
 			return err
 		}
 	default:
-		return errors.New("Structure too long to write: %+v", val)
+		return errors.Errorf("Structure too long to write: %+v", val)
 	}
 
 	_, err := e.Write([]byte{byte(val.Signature())})

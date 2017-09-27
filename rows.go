@@ -4,8 +4,9 @@ import (
 	"database/sql/driver"
 	"io"
 
+	"github.com/pkg/errors"
+
 	"github.com/thingful/golang-neo4j-bolt-driver/encoding"
-	"github.com/thingful/golang-neo4j-bolt-driver/errors"
 	"github.com/thingful/golang-neo4j-bolt-driver/log"
 	"github.com/thingful/golang-neo4j-bolt-driver/structures/graph"
 	"github.com/thingful/golang-neo4j-bolt-driver/structures/messages"
@@ -134,7 +135,7 @@ func (r *boltRows) Close() error {
 		case messages.SuccessMessage:
 			log.Infof("Got success message: %#v", resp)
 		default:
-			return errors.New("Unrecognized response type discarding all rows: Value: %#v", resp)
+			return errors.Errorf("Unrecognized response type discarding all rows: Value: %#v", resp)
 		}
 
 	} else if !r.finishedConsume {
@@ -225,7 +226,7 @@ func (r *boltRows) NextNeo() ([]interface{}, map[string]interface{}, error) {
 		log.Infof("Got record message: %#v", resp)
 		return resp.Fields, nil, nil
 	default:
-		return nil, nil, errors.New("Unrecognized response type getting next query row: %#v", resp)
+		return nil, nil, errors.Errorf("Unrecognized response type getting next query row: %#v", resp)
 	}
 }
 
@@ -268,12 +269,12 @@ func (r *boltRows) NextPipeline() ([]interface{}, map[string]interface{}, Pipeli
 
 		successResp, err := r.statement.conn.consume()
 		if err != nil && err != io.EOF {
-			return nil, nil, nil, errors.Wrap(err, "An error occurred getting next set of rows from pipeline command: %#v", successResp)
+			return nil, nil, nil, errors.Wrapf(err, "An error occurred getting next set of rows from pipeline command: %#v", successResp)
 		}
 
 		success, ok := successResp.(messages.SuccessMessage)
 		if !ok {
-			return nil, nil, nil, errors.New("Unexpected response getting next set of rows from pipeline command: %#v", successResp)
+			return nil, nil, nil, errors.Errorf("Unexpected response getting next set of rows from pipeline command: %#v", successResp)
 		}
 
 		r.statement.rows = newPipelineRows(r.statement, success.Metadata, r.pipelineIndex+1)
@@ -284,6 +285,6 @@ func (r *boltRows) NextPipeline() ([]interface{}, map[string]interface{}, Pipeli
 		log.Infof("Got record message: %#v", resp)
 		return resp.Fields, nil, nil, nil
 	default:
-		return nil, nil, nil, errors.New("Unrecognized response type getting next pipeline row: %#v", resp)
+		return nil, nil, nil, errors.Errorf("Unrecognized response type getting next pipeline row: %#v", resp)
 	}
 }
