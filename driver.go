@@ -91,25 +91,25 @@ func ChunkSize(chunkSize uint16) option {
 
 // DialTimeout sets the dial timeout in seconds we should wait to connect to to
 // Neo4j
-func DialTimeout(sec float64) option {
+func DialTimeout(timeout time.Duration) option {
 	return func(driver *boltDriver) {
-		driver.dialTimeout = time.Duration(sec) * time.Second
+		driver.dialTimeout = timeout
 	}
 }
 
 // ReadTimeout sets the dial timeout in seconds we should wait to read data
 // from Neo4j
-func ReadTimeout(sec float64) option {
+func ReadTimeout(timeout time.Duration) option {
 	return func(driver *boltDriver) {
-		driver.readTimeout = time.Duration(sec) * time.Second
+		driver.readTimeout = timeout
 	}
 }
 
 // WriteTimeout sets the dial timeout in seconds we should wait to write data
 // to Neo4j
-func WriteTimeout(sec float64) option {
+func WriteTimeout(timeout time.Duration) option {
 	return func(driver *boltDriver) {
-		driver.writeTimeout = time.Duration(sec) * time.Second
+		driver.writeTimeout = timeout
 	}
 }
 
@@ -120,7 +120,9 @@ func PoolSize(size int) option {
 	}
 }
 
-// NewDriver creates a new Driver object
+// NewDriver creates a new Driver object. We may pass in many configuration
+// options via the variadic options parameter. These configuration options will
+// be applied to the driver in order.
 func NewDriver(options ...option) Driver {
 	// default options
 	driver := &boltDriver{
