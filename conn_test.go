@@ -1,7 +1,9 @@
 package neo4jbolt
 
 import (
+	"crypto/tls"
 	"io"
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -37,6 +39,66 @@ func TestBoltConn_InvalidURLs(t *testing.T) {
 				t.Error("expected error from incorrect protocol")
 			}
 		})
+	}
+}
+
+func TestBoltConn_parseTLSConfig(t *testing.T) {
+	testcases := []struct {
+		label          string
+		rawURL         string
+		expectedConfig *tls.Config
+	}{
+		{
+			label:          "non tls config present",
+			rawURL:         "bolt://localhost:7687",
+			expectedConfig: nil,
+		},
+		{
+			label:  "tls and no verify",
+			rawURL: "bolt://localhost:7687?tls=true&tls_no_verify=true",
+			expectedConfig: &tls.Config{
+				MinVersion:         tls.VersionTLS10,
+				MaxVersion:         tls.VersionTLS12,
+				InsecureSkipVerify: true,
+				ServerName:         "localhost",
+			},
+		},
+		{
+			label:  "tls and no verify as numbers",
+			rawURL: "bolt://localhost:7687?tls=1&tls_no_verify=1",
+			expectedConfig: &tls.Config{
+				MinVersion:         tls.VersionTLS10,
+				MaxVersion:         tls.VersionTLS12,
+				InsecureSkipVerify: true,
+				ServerName:         "localhost",
+			},
+		},
+		{
+			label:  "tls and verify",
+			rawURL: "bolt://localhost:7687?tls=true&tls_no_verify=false",
+			expectedConfig: &tls.Config{
+				MinVersion:         tls.VersionTLS10,
+				MaxVersion:         tls.VersionTLS12,
+				InsecureSkipVerify: false,
+				ServerName:         "localhost",
+			},
+		},
+	}
+
+	for _, testcase := range testcases {
+		u, err := url.Parse(testcase.rawURL)
+		if err != nil {
+			t.Errorf("error parsing url: %v", err)
+		}
+
+		got, err := parseTLSConfig(u)
+		if err != nil {
+			t.Errorf("unexpected error parsing tls config: %v", err)
+		}
+
+		if !reflect.DeepEqual(got, testcase.expectedConfig) {
+			t.Fatalf("Unexpected TLS config. Expected %#v. Got: %#v", testcase.expectedConfig, got)
+		}
 	}
 }
 

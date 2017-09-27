@@ -160,6 +160,13 @@ func parseTLSConfig(u *url.URL) (*tls.Config, error) {
 		err        error
 	)
 
+	config := &tls.Config{
+		MinVersion:         tls.VersionTLS10,
+		MaxVersion:         tls.VersionTLS12,
+		InsecureSkipVerify: tlsNoVerify,
+		ServerName:         u.Hostname(),
+	}
+
 	if caCertFile != "" {
 		caCert, err := ioutil.ReadFile(caCertFile)
 		if err != nil {
@@ -168,6 +175,8 @@ func parseTLSConfig(u *url.URL) (*tls.Config, error) {
 
 		caCertPool = x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
+
+		config.RootCAs = caCertPool
 	}
 
 	if certFile != "" {
@@ -179,16 +188,11 @@ func parseTLSConfig(u *url.URL) (*tls.Config, error) {
 		if err != nil {
 			return nil, err
 		}
+
+		config.Certificates = []tls.Certificate{cert}
 	}
 
-	return &tls.Config{
-		MinVersion:         tls.VersionTLS10,
-		MaxVersion:         tls.VersionTLS12,
-		RootCAs:            caCertPool,
-		Certificates:       []tls.Certificate{cert},
-		InsecureSkipVerify: tlsNoVerify,
-		ServerName:         u.Host,
-	}, nil
+	return config, nil
 }
 
 type boltConn struct {
