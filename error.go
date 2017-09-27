@@ -12,6 +12,6 @@ const (
 	// initial capacity
 	ErrInvalidCapacity = Error("invalid capacity settings")
 
-	// ErrClosed is return if we attempt to get a connection from a closed pool
+	// ErrClosed is returned if we attempt to get a connection from a closed pool
 	ErrClosed = Error("pool is closed")
 )
