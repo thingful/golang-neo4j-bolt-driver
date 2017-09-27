@@ -3,6 +3,7 @@ package neo4jbolt_test
 import (
 	"fmt"
 	"os"
+	"time"
 
 	bolt "github.com/thingful/golang-neo4j-bolt-driver"
 )
@@ -46,6 +47,34 @@ func ExampleNewDriver_openNeo() {
 	// Output: 1
 }
 
-func ExampleNewDriver_open() {
+func ExampleNewDriver_configure() {
+	driver := bolt.NewDriver(
+		bolt.DialTimeout(time.Duration(5)*time.Second),
+		bolt.ReadTimeout(time.Duration(5)*time.Second),
+		bolt.WriteTimeout(time.Duration(5)*time.Second),
+		bolt.PoolSize(10),
+	)
 
+	connStr := mustGetConnStr()
+
+	pool, err := driver.OpenPool(connStr)
+	if err != nil {
+		panic(err)
+	}
+
+	conn, err := pool.Get()
+	if err != nil {
+		panic(err)
+	}
+
+	defer conn.Close()
+
+	data, _, _, err := conn.QueryNeoAll(`MATCH (n) RETURN n`, nil)
+	if err != nil {
+		panic(err)
+	}
+
+	fmt.Println(data)
+
+	// Output: []
 }
