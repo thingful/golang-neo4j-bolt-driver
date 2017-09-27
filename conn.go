@@ -97,7 +97,7 @@ func newBoltConn(driver *boltDriver, pool *connPool) (*boltConn, error) {
 	// initialize the connection
 	err = c.initialize(driver)
 	if err != nil {
-		return nil, errors.Wrap(err, "An error occurred initializing connection")
+		return nil, err
 	}
 
 	return c, nil

@@ -173,7 +173,7 @@ func (d *boltDriver) OpenPool(connStr string) (Pool, error) {
 		conn, err := newBoltConn(d, c)
 		if err != nil {
 			c.Close()
-			return nil, errors.Wrap(err, "Error opening connection while initializing pool")
+			return nil, errors.Wrap(err, "Error initializing pool")
 		}
 		c.conns <- conn
 	}
