@@ -3,7 +3,6 @@ package neo4jbolt
 import (
 	"errors"
 	"sync"
-	"time"
 
 	"github.com/thingful/golang-neo4j-bolt-driver/log"
 )
@@ -17,6 +16,9 @@ type Pool interface {
 	// Close closes the pool and all its connections. After Close() the pool is
 	// no longer usable.
 	Close()
+
+	// Len returns the current number of connections in the pool.
+	Len() int
 }
 
 type connPool struct {
@@ -45,7 +47,7 @@ func (c *connPool) Close() {
 }
 
 func (c *connPool) Get() (Conn, error) {
-	log.Info("Getting conn from pool")
+	log.Infof("Getting conn from pool: %v", c.Len())
 	conns := c.getConns()
 	if conns == nil {
 		return nil, ErrClosed
@@ -59,8 +61,6 @@ func (c *connPool) Get() (Conn, error) {
 		if conn == nil {
 			return nil, ErrClosed
 		}
-	case <-time.After(c.driver.poolTimeout):
-		return nil, ErrPoolTimeout
 	default:
 		conn, err = newBoltConn(c.driver, c)
 		if err != nil {
@@ -71,6 +71,9 @@ func (c *connPool) Get() (Conn, error) {
 	return conn, nil
 }
 
+// Len returns the current number of connections in the pool.
+func (c *connPool) Len() int { return len(c.getConns()) }
+
 // put puts the connection back into the pool. If the pool is full or closed
 // the underlying net.Conn is simply closed. A nil conn will be rejected.
 func (c *connPool) put(conn *boltConn) error {
@@ -78,7 +81,7 @@ func (c *connPool) put(conn *boltConn) error {
 		return errors.New("connection is nil, rejecting")
 	}
 
-	log.Info("Putting conn back into pool")
+	log.Infof("Putting conn back into pool: %v\n", c.Len())
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -91,8 +94,10 @@ func (c *connPool) put(conn *boltConn) error {
 
 	select {
 	case c.conns <- conn:
+		log.Info("Connection returned to pool")
 		return nil
 	default:
+		log.Info("Pool is full closing connection")
 		// pool is full, close passed connection - note we close the wrapped
 		// net.Conn, not our wrapper
 		return conn.conn.Close()
