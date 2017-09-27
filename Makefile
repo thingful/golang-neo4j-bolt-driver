@@ -1,6 +1,6 @@
 .PHONY: test
 test:
-	NEO4J_BOLT=bolt://localhost:7687 go test -v -coverprofile=cover.out
+	NEO4J_BOLT=bolt://localhost:8687 go test -v -coverprofile=cover.out
 
 .PHONY: coverage
 coverage: test
