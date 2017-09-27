@@ -15,41 +15,46 @@ import (
 // Rows represents results of rows from the DB
 //
 // Row objects ARE NOT THREAD SAFE.
-// If you want to use multiple go routines with these objects,
-// you should use a driver to create a new conn for each routine.
+// If you want to use multiple go routines with these objects, you should use a
+// driver to create a new conn for each routine.
 type Rows interface {
 	// Columns Gets the names of the columns in the returned dataset
 	Columns() []string
+
 	// Metadata Gets all of the metadata returned from Neo on query start
 	Metadata() map[string]interface{}
+
 	// Close the rows, flushing any existing datastream
 	Close() error
-	// NextNeo gets the next row result
-	// When the rows are completed, returns the success metadata
-	// and io.EOF
+
+	// NextNeo gets the next row result.  When the rows are completed, returns
+	// the success metadata and io.EOF
 	NextNeo() ([]interface{}, map[string]interface{}, error)
-	// All gets all of the results from the row set. It's recommended to use NextNeo when
-	// there are a lot of rows
+
+	// All gets all of the results from the row set. It's recommended to use
+	// NextNeo when there are a lot of rows
 	All() ([][]interface{}, map[string]interface{}, error)
 }
 
-// PipelineRows represents results of a set of rows from the DB
-// when running a pipeline statement.
+// PipelineRows represents results of a set of rows from the DB when running a
+// pipeline statement.
 //
 // Row objects ARE NOT THREAD SAFE.
-// If you want to use multiple go routines with these objects,
-// you should use a driver to create a new conn for each routine.
+// If you want to use multiple go routines with these objects, you should use a
+// driver to create a new conn for each routine.
 type PipelineRows interface {
 	// Columns Gets the names of the columns in the returned dataset
 	Columns() []string
+
 	// Metadata Gets all of the metadata returned from Neo on query start
 	Metadata() map[string]interface{}
+
 	// Close the rows, flushing any existing datastream
 	Close() error
-	// NextPipeline gets the next row result
-	// When the rows are completed, returns the success metadata and the next
-	// set of rows.
-	// When all rows are completed, returns io.EOF
+
+	// NextPipeline gets the next row result. When the rows are completed,
+	// returns the success metadata and the next set of rows.  When all rows are
+	// completed, returns io.EOF
 	NextPipeline() ([]interface{}, map[string]interface{}, PipelineRows, error)
 }
 
