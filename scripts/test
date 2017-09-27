@@ -2,4 +2,4 @@
 
 set -euo pipefail
 
-NEO4J_BOLT=bolt://localhost:7687 go test -v
+NEO4J_BOLT=bolt://localhost:7687 go test -v -coverprofile=cover.out
